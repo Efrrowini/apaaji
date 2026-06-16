@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Apaaji - Your Companion</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 24px;
+            padding: 32px;
+            width: 100%;
+            max-width: 600px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 24px;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            color: #764ba2;
+            font-weight: 700;
+        }
+
+        .header p {
+            font-size: 1.1rem;
+            color: #888;
+            margin-top: 6px;
+        }
+
+        .chat-box {
+            height: 380px;
+            overflow-y: auto;
+            border: 2px solid #f0f0f0;
+            border-radius: 16px;
+            padding: 20px;
+            margin-bottom: 20px;
+            background: #fafafa;
+        }
+
+        .message {
+            margin-bottom: 16px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .message.user { align-items: flex-end; }
+        .message.apaaji { align-items: flex-start; }
+
+        .bubble {
+            max-width: 80%;
+            padding: 14px 18px;
+            border-radius: 18px;
+            font-size: 1.05rem;
+            line-height: 1.5;
+        }
+
+        .message.user .bubble {
+            background: #764ba2;
+            color: white;
+            border-bottom-right-radius: 4px;
+        }
+
+        .message.apaaji .bubble {
+            background: #f0e6ff;
+            color: #333;
+            border-bottom-left-radius: 4px;
+        }
+
+        .sender {
+            font-size: 0.8rem;
+            color: #aaa;
+            margin-bottom: 4px;
+            padding: 0 4px;
+        }
+
+        .controls {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .text-row {
+            display: flex;
+            gap: 10px;
+        }
+
+        #userInput {
+            flex: 1;
+            padding: 16px 20px;
+            border: 2px solid #ddd;
+            border-radius: 50px;
+            font-size: 1.05rem;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        #userInput:focus { border-color: #764ba2; }
+
+        #sendBtn {
+            padding: 16px 28px;
+            background: #764ba2;
+            color: white;
+            border: none;
+            border-radius: 50px;
+            font-size: 1.05rem;
+            cursor: pointer;
+            font-weight: 600;
+            transition: background 0.2s;
+        }
+
+        #sendBtn:hover { background: #5a3880; }
+
+        #voiceBtn {
+            width: 100%;
+            padding: 18px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            border-radius: 50px;
+            font-size: 1.2rem;
+            cursor: pointer;
+            font-weight: 700;
+            letter-spacing: 1px;
+            transition: opacity 0.2s;
+        }
+
+        #voiceBtn:hover { opacity: 0.9; }
+
+        #voiceBtn.listening {
+            background: linear-gradient(135deg, #f093fb, #f5576c);
+            animation: pulse 1s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.03); }
+        }
+
+        .status {
+            text-align: center;
+            font-size: 0.95rem;
+            color: #888;
+            min-height: 20px;
+        }
+
+        .typing {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 14px 18px;
+            background: #f0e6ff;
+            border-radius: 18px;
+            border-bottom-left-radius: 4px;
+            width: fit-content;
+        }
+
+        .dot {
+            width: 8px;
+            height: 8px;
+            background: #764ba2;
+            border-radius: 50%;
+            animation: bounce 1.2s infinite;
+        }
+
+        .dot:nth-child(2) { animation-delay: 0.2s; }
+        .dot:nth-child(3) { animation-delay: 0.4s; }
+
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-6px); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🙏 Apaaji</h1>
+            <p>Aapka apna saathi — always here for you</p>
+        </div>
+
+        <div class="chat-box" id="chatBox">
+            <div class="message apaaji">
+                <div class="sender">Apaaji</div>
+                <div class="bubble">Namaste ji! 🙏 Main Apaaji hoon, aapka apna saathi. Aaj aap kaisa feel kar rahe hain? Baat karein!</div>
+            </div>
+        </div>
+
+        <div class="controls">
+            <div class="text-row">
+                <input type="text" id="userInput" placeholder="Yahan likhein ya neeche bolein..." />
+                <button id="sendBtn">Bhejo</button>
+            </div>
+            <button id="voiceBtn">🎤 Bolkar Baat Karein</button>
+            <div class="status" id="status"></div>
+        </div>
+    </div>
+
+    <script>
+        const USER_ID = "user_001";
+        let conversationHistory = [];
+        let recognition = null;
+        let isListening = false;
+
+        function setStatus(msg) {
+            document.getElementById('status').textContent = msg;
+        }
+
+        function addMessage(role, text) {
+            const chatBox = document.getElementById('chatBox');
+            const div = document.createElement('div');
+            div.className = 'message ' + (role === 'user' ? 'user' : 'apaaji');
+            div.innerHTML =
+                '<div class="sender">' + (role === 'user' ? 'Aap' : 'Apaaji') + '</div>' +
+                '<div class="bubble">' + text + '</div>';
+            chatBox.appendChild(div);
+            chatBox.scrollTop = chatBox.scrollHeight;
+        }
+
+        function showTyping() {
+            const chatBox = document.getElementById('chatBox');
+            const div = document.createElement('div');
+            div.className = 'message apaaji';
+            div.id = 'typingIndicator';
+            div.innerHTML =
+                '<div class="sender">Apaaji</div>' +
+                '<div class="typing">' +
+                '<div class="dot"></div>' +
+                '<div class="dot"></div>' +
+                '<div class="dot"></div>' +
+                '</div>';
+            chatBox.appendChild(div);
+            chatBox.scrollTop = chatBox.scrollHeight;
+        }
+
+        function hideTyping() {
+            const el = document.getElementById('typingIndicator');
+            if (el) el.remove();
+        }
+
+        async function sendMessage() {
+            const input = document.getElementById('userInput');
+            const message = input.value.trim();
+            if (!message) return;
+
+            input.value = '';
+            addMessage('user', message);
+            showTyping();
+
+            try {
+                const response = await fetch('/api/chat', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        user_id: USER_ID,
+                        message: message,
+                        conversation_history: conversationHistory
+                    })
+                });
+
+                const data = await response.json();
+                hideTyping();
+                addMessage('apaaji', data.reply);
+                conversationHistory = data.updated_history;
+
+            } catch (err) {
+                hideTyping();
+                addMessage('apaaji', 'Maafi chahta hoon ji, kuch gadbad ho gayi. Dobara try karein.');
+            }
+        }
+
+        function setupVoice() {
+            if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+                document.getElementById('voiceBtn').style.display = 'none';
+                return;
+            }
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            recognition = new SpeechRecognition();
+            recognition.lang = 'hi-IN';
+            recognition.continuous = false;
+            recognition.interimResults = false;
+
+            recognition.onresult = function(event) {
+                const transcript = event.results[0][0].transcript;
+                document.getElementById('userInput').value = transcript;
+                setStatus('');
+                sendMessage();
+            };
+
+            recognition.onend = function() {
+                isListening = false;
+                document.getElementById('voiceBtn').classList.remove('listening');
+                document.getElementById('voiceBtn').textContent = '🎤 Bolkar Baat Karein';
+            };
+
+            recognition.onerror = function() {
+                isListening = false;
+                document.getElementById('voiceBtn').classList.remove('listening');
+                document.getElementById('voiceBtn').textContent = '🎤 Bolkar Baat Karein';
+                setStatus('Awaaz nahi suni, dobara try karein');
+            };
+        }
+
+        function toggleVoice() {
+            if (!recognition) return;
+            if (isListening) {
+                recognition.stop();
+            } else {
+                recognition.start();
+                isListening = true;
+                document.getElementById('voiceBtn').classList.add('listening');
+                document.getElementById('voiceBtn').textContent = '🔴 Sun raha hoon...';
+                setStatus('Boliye, main sun raha hoon...');
+            }
+        }
+
+        document.getElementById('sendBtn').addEventListener('click', sendMessage);
+        document.getElementById('voiceBtn').addEventListener('click', toggleVoice);
+        document.getElementById('userInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') sendMessage();
+        });
+
+        setupVoice();
+    </script>
+</body>
+</html>
