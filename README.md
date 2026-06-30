@@ -121,7 +121,7 @@ Visit `http://localhost:8000` 🙏
 
 ## 👨‍💻 Built By
 
-**Efro** — 2nd Year BTech CSE, Presidency University Bangalore
+**Efrrowini** — 2nd Year BTech CSE, Presidency University Bangalore
 
 Samsung Solve for Tomorrow 2026 | Solo Submission
 
